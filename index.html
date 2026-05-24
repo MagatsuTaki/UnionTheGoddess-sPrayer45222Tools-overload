@@ -354,20 +354,20 @@ footer a { color: var(--text2); }
 const OPTS = [
   {name:'クリティカルダメージ増加', sh:'クリダメ', p:0.10, v:[6.64,7.62,8.60,9.58,10.56,11.54,12.52,13.50,14.48,15.46,16.44,17.42,18.40,19.38,20.36]},
   {name:'クリティカル率増加',       sh:'クリ率',   p:0.12, v:[2.30,2.64,2.98,3.32,3.66,4.00,4.35,4.69,5.03,5.37,5.71,6.05,6.39,6.73,7.07]},
-  {name:'チャージダメージ増加',     sh:'チャダメ', p:0.12, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
-  {name:'チャージ速度増加',         sh:'チャ速', p:0.12, v:[1.98,2.28,2.57,2.86,3.16,3.45,3.75,4.04,4.33,4.63,4.92,5.21,5.51,5.80,6.09]},
-  {name:'攻撃力増加',               sh:'攻撃力',     p:0.10, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
-  {name:'最大装弾数増加',           sh:'装弾数',    p:0.12, v:[27.84,31.95,36.06,40.17,44.28,48.39,52.50,56.60,60.71,64.82,68.93,73.04,77.15,81.26,85.37]},
-  {name:'防御力増加',               sh:'防御力',     p:0.10, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
-  {name:'命中率増加',               sh:'命中率',    p:0.12, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
-  {name:'有利コードダメージ増加',   sh:'有利コード', p:0.10, v:[9.54,10.94,12.34,13.75,15.15,16.55,17.95,19.35,20.75,22.15,23.56,24.96,26.36,27.76,29.16]},
+  {name:'チャージダメージ増加',     sh:'チャージダメ', p:0.12, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
+  {name:'チャージ速度増加',         sh:'チャージ速度', p:0.12, v:[1.98,2.28,2.57,2.86,3.16,3.45,3.75,4.04,4.33,4.63,4.92,5.21,5.51,5.80,6.09]},
+  {name:'攻撃力増加',               sh:'ATK',     p:0.10, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
+  {name:'最大装弾数増加',           sh:'弾数',    p:0.12, v:[27.84,31.95,36.06,40.17,44.28,48.39,52.50,56.60,60.71,64.82,68.93,73.04,77.15,81.26,85.37]},
+  {name:'防御力増加',               sh:'DEF',     p:0.10, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
+  {name:'命中率増加',               sh:'命中',    p:0.12, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
+  {name:'有利コードダメージ増加',   sh:'コードダメ', p:0.10, v:[9.54,10.94,12.34,13.75,15.15,16.55,17.95,19.35,20.75,22.15,23.56,24.96,26.36,27.76,29.16]},
 ];
 
 const RP = [...Array(5).fill(0.12), ...Array(5).fill(0.07), ...Array(5).fill(0.01)];
 const RC = RP.map((_,i) => RP.slice(0,i+1).reduce((a,b) => a+b, 0));
 const SP = [1.0, 0.5, 0.3];
 
-let goals   = [{oi:0, mr:4}, {oi:1, mr:4}, {oi:2, mr:4}];
+let goals   = [{e:false, oi:0, mr:4}, {e:true, oi:1, mr:4}, {e:true, oi:2, mr:4}];
 let cs      = [{e:true, ti:0, r:0, lk:false}, {e:true, ti:0, r:0, lk:false}, {e:true, ti:0, r:0, lk:false}];
 
 /* ---- core simulation ---- */
@@ -388,11 +388,12 @@ function rOpt(ex) {
 }
 
 function isDone(slots, gs) {
-  const rem = new Set([0,1,2]);
+  const activeGs = gs.filter(g => !g.e);
+  const rem = new Set(activeGs.map((_,i) => i));
   for (const s of slots) {
     if (!s) continue;
     for (const gi of [...rem]) {
-      if (s.ti === gs[gi].oi && s.r >= gs[gi].mr) { rem.delete(gi); break; }
+      if (s.ti === activeGs[gi].oi && s.r >= activeGs[gi].mr) { rem.delete(gi); break; }
     }
   }
   return rem.size === 0;
@@ -400,17 +401,27 @@ function isDone(slots, gs) {
 
 function clf(s, gs) {
   if (!s) return 'e';
-  const gi = gs.findIndex(g => g.oi === s.ti);
+  const activeGs = gs.filter(g => !g.e);
+  const gi = activeGs.findIndex(g => g.oi === s.ti);
   if (gi < 0) return 'b';
-  return s.r >= gs[gi].mr ? 'd' : 't';
+  return s.r >= activeGs[gi].mr ? 'd' : 't';
 }
 
 function decide(slots, gs) {
+  const activeGs = gs.filter(g => !g.e);
   const cl = slots.map((s,i) => ({i, c: clf(s,gs)}));
   const d  = cl.filter(x => x.c === 'd');
   const t  = cl.filter(x => x.c === 't');
-  const b  = cl.filter(x => x.c === 'b' || x.c === 'e');
-  if (b.length === 0) return {op:'vr', lk: d.slice(0,2).map(x => x.i)};
+
+  // 目標種類が全スロット中に揃っているか確認（bad/emptyスロットは無視）
+  const coveredTypes = new Set([...d, ...t].map(x => slots[x.i].ti));
+  const allTypesCovered = activeGs.every(g => coveredTypes.has(g.oi));
+
+  if (allTypesCovered) {
+    // 全目標種類が揃っている → 数値再設定。達成済みスロットをロック
+    return {op:'vr', lk: d.slice(0,2).map(x => x.i)};
+  }
+  // 種類が足りない → 効果変更。達成済み・種類一致スロットをロック
   return {op:'ec', lk: [...d,...t].slice(0,2).map(x => x.i)};
 }
 
@@ -477,7 +488,7 @@ function updateVrBtn() {
   const slots = toSlots();
   const lks   = new Set(getUserLocks());
   const unlocked = [0,1,2].filter(i => !lks.has(i) && slots[i] !== null);
-  const goalOpts  = new Set(goals.map(g => g.oi));
+  const goalOpts  = new Set(goals.filter(g => !g.e).map(g => g.oi));
   const vrOk = unlocked.length > 0 && unlocked.every(i => goalOpts.has(slots[i].ti));
   const btn3 = document.getElementById('btn3');
   if (btn3) {
@@ -496,7 +507,9 @@ function patLabel(lks, slots) {
 }
 
 function valErr() {
-  if (new Set(goals.map(g => g.oi)).size < 3) return '同じオプションを重複して指定することはできません。';
+  const active = goals.filter(g => !g.e);
+  if (active.length === 0) return '目標オプションを少なくとも1つ設定してください。';
+  if (new Set(active.map(g => g.oi)).size < active.length) return '同じオプションを重複して指定することはできません。';
   return null;
 }
 
@@ -526,11 +539,12 @@ function buildGoals() {
     d.innerHTML = `
       <div class="row-lbl">オプション ${i+1}</div>
       <div class="g2">
-        <select onchange="ug(${i},'oi',+this.value)">
-          ${OPTS.map((o,oi) => `<option value="${oi}"${g.oi===oi?' selected':''}>${o.name}</option>`).join('')}
+        <select onchange="ug(${i},'oi',this.value)">
+          <option value="e"${g.e?' selected':''}>─ 指定しない ─</option>
+          ${OPTS.map((o,oi) => `<option value="${oi}"${!g.e&&g.oi===oi?' selected':''}>${o.name}</option>`).join('')}
         </select>
-        <select onchange="ug(${i},'mr',+this.value)" id="gr${i}">
-          ${OPTS[g.oi].v.map((v,ri) => `<option value="${ri}"${g.mr===ri?' selected':''}>${v}%以上（ランク${ri+1}）</option>`).join('')}
+        <select onchange="ug(${i},'mr',+this.value)" id="gr${i}"${g.e?' disabled':''}>
+          ${g.e ? '<option>─</option>' : OPTS[g.oi].v.map((v,ri) => `<option value="${ri}"${g.mr===ri?' selected':''}>${v}%以上（ランク${ri+1}）</option>`).join('')}
         </select>
       </div>`;
     c.appendChild(d);
@@ -569,11 +583,21 @@ function buildState() {
 /* ---- event handlers ---- */
 
 function ug(i, k, v) {
-  goals[i] = {...goals[i], [k]: v};
   if (k === 'oi') {
-    goals[i].mr = 0;
-    document.getElementById('gr'+i).innerHTML =
-      OPTS[v].v.map((x,ri) => `<option value="${ri}">${x}%以上（ランク${ri+1}）</option>`).join('');
+    if (v === 'e') {
+      goals[i] = {e:true, oi:goals[i].oi, mr:goals[i].mr};
+      const sel = document.getElementById('gr'+i);
+      sel.disabled = true;
+      sel.innerHTML = '<option>─</option>';
+    } else {
+      const oi = parseInt(v);
+      goals[i] = {e:false, oi, mr:0};
+      const sel = document.getElementById('gr'+i);
+      sel.disabled = false;
+      sel.innerHTML = OPTS[oi].v.map((x,ri) => `<option value="${ri}">${x}%以上（ランク${ri+1}）</option>`).join('');
+    }
+  } else {
+    goals[i] = {...goals[i], [k]: v};
   }
   clr(); updateVrBtn();
 }
