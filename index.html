@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<title>NIKKE オーバーロード カスタムモジュール計算ツール</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg2: #1a1d27;
+  --bg3: #23263a;
+  --border: rgba(255,255,255,0.10);
+  --border2: rgba(255,255,255,0.18);
+  --text: #e8eaf0;
+  --text2: #9096b0;
+  --text3: #5a6080;
+  --accent: #f0b429;
+  --accent-bg: rgba(240,180,41,0.12);
+  --best-bg: #1a3020;
+  --best-text: #6ddc90;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f5f8;
+    --bg2: #ffffff;
+    --bg3: #edeef3;
+    --border: rgba(0,0,0,0.10);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1d2e;
+    --text2: #555970;
+    --text3: #9096b0;
+    --accent: #c47a00;
+    --accent-bg: rgba(196,122,0,0.09);
+    --best-bg: #d8f5e4;
+    --best-text: #1a6636;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  font-size: 15px;
+  min-height: 100vh;
+}
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 0.5px solid var(--border);
+}
+header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+header .accent { color: var(--accent); }
+header p {
+  font-size: 13px;
+  color: var(--text2);
+}
+.card {
+  background: var(--bg2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.125rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.card-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 1rem;
+}
+.row-item { margin-bottom: 10px; }
+.row-item:last-child { margin-bottom: 0; }
+.row-lbl {
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+.row-lbl .hint {
+  font-size: 11px;
+  color: var(--text3);
+}
+.g2 {
+  display: grid;
+  grid-template-columns: 1fr 190px;
+  gap: 8px;
+}
+select, button {
+  font-family: inherit;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+select {
+  width: 100%;
+  background: var(--bg3);
+  color: var(--text);
+  border: 0.5px solid var(--border2);
+  padding: 7px 8px;
+  cursor: pointer;
+  appearance: auto;
+}
+select:hover { border-color: var(--accent); }
+select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+button {
+  background: var(--bg3);
+  color: var(--text);
+  border: 0.5px solid var(--border2);
+  padding: 11px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, border-color 0.15s;
+}
+button:hover:not(:disabled) {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.err {
+  font-size: 12px;
+  color: #e06c75;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: rgba(224,108,117,0.10);
+  border-radius: var(--radius-sm);
+  display: none;
+}
+/* General result */
+.big-num {
+  font-size: 52px;
+  font-weight: 600;
+  color: var(--accent);
+  text-align: center;
+  line-height: 1;
+  padding: 0.5rem 0 4px;
+}
+.big-lbl {
+  font-size: 12px;
+  color: var(--text2);
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+.pct-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.pct-card {
+  background: var(--bg3);
+  border-radius: var(--radius-sm);
+  padding: 9px 4px;
+  text-align: center;
+}
+.pct-num {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+.pct-lbl {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+.note {
+  font-size: 11px;
+  color: var(--text3);
+  text-align: center;
+  margin-top: 10px;
+}
+/* Comparison table */
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.cmp-table th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 0.5px solid var(--border);
+  white-space: nowrap;
+}
+.cmp-table td {
+  padding: 8px 10px;
+  border-bottom: 0.5px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+  line-height: 1.5;
+}
+.cmp-table tr:last-child td { border-bottom: none; }
+.cmp-table .tcen { text-align: center; }
+.best {
+  font-weight: 600;
+  color: var(--best-text);
+  background: var(--best-bg);
+  border-radius: 4px;
+  padding: 2px 9px;
+  font-size: 13px;
+}
+.na { color: var(--text3); font-size: 12px; }
+.lock-tag {
+  display: inline-block;
+  font-size: 11px;
+  background: var(--bg3);
+  border: 0.5px solid var(--border2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-right: 3px;
+  white-space: nowrap;
+}
+.cost-hint { font-size: 11px; color: var(--text3); }
+
+footer {
+  text-align: center;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 0.5px solid var(--border);
+  font-size: 11px;
+  color: var(--text3);
+}
+footer a { color: var(--text2); }
+
+@media (max-width: 520px) {
+  .g2 { grid-template-columns: 1fr; }
+  .btn-row { grid-template-columns: 1fr; }
+  .pct-grid { grid-template-columns: repeat(3, 1fr); }
+  .big-num { font-size: 40px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>NIKKE <span class="accent">オーバーロード</span><br>カスタムモジュール計算ツール</h1>
+  <p>モンテカルロシミュレーションによる期待値・ロックパターン比較</p>
+</header>
+
+<!-- Section 1: Goals -->
+<div class="card">
+  <div class="card-title">① 目標オプション設定</div>
+  <div id="goals-ui"></div>
+</div>
+
+<!-- Section 2: Current state -->
+<div class="card">
+  <div class="card-title">② 現在の装備状態 <span style="font-size:11px;font-weight:400;letter-spacing:0;color:var(--text3)">（ロックパターン比較で使用）</span></div>
+  <div id="state-ui"></div>
+</div>
+
+<p class="err" id="err"></p>
+
+<div class="btn-row">
+  <button id="btn1" onclick="doGeneral()">▶ 期待値を計算</button>
+  <button id="btn2" onclick="doCompare()">⇄ ロックパターンを比較</button>
+</div>
+
+<!-- Result: General -->
+<div id="res-general" class="card" style="display:none">
+  <div class="card-title">期待値（ゼロスタート）</div>
+  <div class="big-num" id="r-mean">—</div>
+  <div class="big-lbl">カスタムモジュール（期待値）</div>
+  <div class="pct-grid">
+    <div class="pct-card"><div class="pct-num" id="rp25">—</div><div class="pct-lbl">25%以内</div></div>
+    <div class="pct-card"><div class="pct-num" id="rp50">—</div><div class="pct-lbl">50%以内</div></div>
+    <div class="pct-card"><div class="pct-num" id="rp75">—</div><div class="pct-lbl">75%以内</div></div>
+    <div class="pct-card"><div class="pct-num" id="rp90">—</div><div class="pct-lbl">90%以内</div></div>
+    <div class="pct-card"><div class="pct-num" id="rp99">—</div><div class="pct-lbl">99%以内</div></div>
+  </div>
+  <p class="note">30,000回シミュレーション ｜ 結果は毎回わずかに変動します</p>
+</div>
+
+<!-- Result: Comparison -->
+<div id="res-cmp" class="card" style="display:none">
+  <div class="card-title">ロックパターン比較</div>
+  <div id="cmp-body"></div>
+  <p class="note" id="cmp-note"></p>
+</div>
+
+<footer>
+  <p>NIKKE オーバーロード カスタムモジュール計算ツール</p>
+  <p style="margin-top:4px">全ての計算はお使いのブラウザ内で完結します。データは外部に送信されません。</p>
+</footer>
+
+</div><!-- /page -->
+
+<script>
+const OPTS = [
+  {name:'クリティカルダメージ増加', sh:'クリダメ', p:0.10, v:[6.64,7.62,8.60,9.58,10.56,11.54,12.52,13.50,14.48,15.46,16.44,17.42,18.40,19.38,20.36]},
+  {name:'クリティカル率増加',       sh:'クリ率',   p:0.12, v:[2.30,2.64,2.98,3.32,3.66,4.00,4.35,4.69,5.03,5.37,5.71,6.05,6.39,6.73,7.07]},
+  {name:'チャージダメージ増加',     sh:'チャージダメ', p:0.12, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
+  {name:'チャージ速度増加',         sh:'チャージ速度', p:0.12, v:[1.98,2.28,2.57,2.86,3.16,3.45,3.75,4.04,4.33,4.63,4.92,5.21,5.51,5.80,6.09]},
+  {name:'攻撃力増加',               sh:'ATK',     p:0.10, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
+  {name:'最大装弾数増加',           sh:'弾数',    p:0.12, v:[27.84,31.95,36.06,40.17,44.28,48.39,52.50,56.60,60.71,64.82,68.93,73.04,77.15,81.26,85.37]},
+  {name:'防御力増加',               sh:'DEF',     p:0.10, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
+  {name:'命中率増加',               sh:'命中',    p:0.12, v:[4.77,5.47,6.18,6.88,7.59,8.29,9.00,9.70,10.40,11.11,11.81,12.52,13.22,13.93,14.63]},
+  {name:'有利コードダメージ増加',   sh:'コードダメ', p:0.10, v:[9.54,10.94,12.34,13.75,15.15,16.55,17.95,19.35,20.75,22.15,23.56,24.96,26.36,27.76,29.16]},
+];
+
+const RP = [...Array(5).fill(0.12), ...Array(5).fill(0.07), ...Array(5).fill(0.01)];
+const RC = RP.map((_,i) => RP.slice(0,i+1).reduce((a,b) => a+b, 0));
+const SP = [1.0, 0.5, 0.3];
+
+let goals   = [{oi:0, mr:4}, {oi:1, mr:4}, {oi:2, mr:4}];
+let cs      = [{e:true, ti:0, r:0}, {e:true, ti:0, r:0}, {e:true, ti:0, r:0}];
+
+/* ---- core simulation ---- */
+
+function rRank() {
+  const r = Math.random();
+  for (let i = 0; i < RC.length; i++) if (r < RC[i]) return i;
+  return 14;
+}
+
+function rOpt(ex) {
+  const w = OPTS.map((o,i) => ex.has(i) ? 0 : o.p);
+  const t = w.reduce((a,b) => a+b, 0);
+  let r = Math.random() * t;
+  for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return i; }
+  for (let i = w.length-1; i >= 0; i--) if (w[i] > 0) return i;
+  return 0;
+}
+
+function isDone(slots, gs) {
+  const rem = new Set([0,1,2]);
+  for (const s of slots) {
+    if (!s) continue;
+    for (const gi of [...rem]) {
+      if (s.ti === gs[gi].oi && s.r >= gs[gi].mr) { rem.delete(gi); break; }
+    }
+  }
+  return rem.size === 0;
+}
+
+function clf(s, gs) {
+  if (!s) return 'e';
+  const gi = gs.findIndex(g => g.oi === s.ti);
+  if (gi < 0) return 'b';
+  return s.r >= gs[gi].mr ? 'd' : 't';
+}
+
+function decide(slots, gs) {
+  const cl = slots.map((s,i) => ({i, c: clf(s,gs)}));
+  const d  = cl.filter(x => x.c === 'd');
+  const t  = cl.filter(x => x.c === 't');
+  const b  = cl.filter(x => x.c === 'b' || x.c === 'e');
+  if (b.length === 0) return {op:'vr', lk: d.slice(0,2).map(x => x.i)};
+  return {op:'ec', lk: [...d,...t].slice(0,2).map(x => x.i)};
+}
+
+function applyStep(slots, lks, op) {
+  const ns = [...slots];
+  const lk = new Set(lks);
+  const lt = new Set(lks.map(i => slots[i]?.ti).filter(t => t != null));
+  if (op === 'ec') {
+    const a = new Set(lt);
+    for (let i = 0; i < 3; i++) {
+      if (lk.has(i)) continue;
+      if (Math.random() >= SP[i]) { ns[i] = null; continue; }
+      const ti = rOpt(a);
+      ns[i] = {ti, r: rRank()};
+      a.add(ti);
+    }
+  } else {
+    for (let i = 0; i < 3; i++) {
+      if (lk.has(i)) continue;
+      if (slots[i]) ns[i] = {ti: slots[i].ti, r: rRank()};
+    }
+  }
+  return ns;
+}
+
+function simFull(gs) {
+  let s = [null, null, null], c = 0;
+  for (let i = 0; i < 10000; i++) {
+    if (isDone(s, gs)) break;
+    const {op, lk} = decide(s, gs);
+    c += 1 + lk.length;
+    s = applyStep(s, lk, op);
+  }
+  return c;
+}
+
+function simFrom(init, gs, flk, fop) {
+  if (isDone(init, gs)) return 0;
+  let s = applyStep(init, flk, fop);
+  let c = 1 + flk.length;
+  for (let i = 0; i < 10000; i++) {
+    if (isDone(s, gs)) break;
+    const {op, lk} = decide(s, gs);
+    c += 1 + lk.length;
+    s = applyStep(s, lk, op);
+  }
+  return c;
+}
+
+/* ---- helpers ---- */
+
+function toSlots() {
+  return cs.map(s => s.e ? null : {ti: s.ti, r: s.r});
+}
+
+function getPatterns(slots) {
+  const occ = [0,1,2].filter(i => slots[i] !== null);
+  const ps = [[]];
+  for (const i of occ) ps.push([i]);
+  for (let a = 0; a < occ.length; a++)
+    for (let b = a+1; b < occ.length; b++)
+      ps.push([occ[a], occ[b]]);
+  return ps;
+}
+
+function patLabel(lks, slots) {
+  if (!lks.length) return 'ロックなし';
+  return lks.map(i => {
+    const s = slots[i];
+    return `<span class="lock-tag">S${i+1}: ${OPTS[s.ti].sh}&nbsp;${OPTS[s.ti].v[s.r]}%</span>`;
+  }).join('') + 'をロック';
+}
+
+function valErr() {
+  if (new Set(goals.map(g => g.oi)).size < 3) return '同じオプションを重複して指定することはできません。';
+  return null;
+}
+
+function setWait(b) {
+  document.getElementById('btn1').disabled = b;
+  document.getElementById('btn2').disabled = b;
+  document.getElementById('btn1').textContent = b ? '計算中…' : '▶ 期待値を計算';
+  document.getElementById('btn2').textContent = b ? '計算中…' : '⇄ ロックパターンを比較';
+}
+
+function clr() {
+  ['res-general','res-cmp'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('err').style.display = 'none';
+}
+
+/* ---- UI builders ---- */
+
+function buildGoals() {
+  const c = document.getElementById('goals-ui');
+  c.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const g = goals[i];
+    const d = document.createElement('div');
+    d.className = 'row-item';
+    d.innerHTML = `
+      <div class="row-lbl">オプション ${i+1}</div>
+      <div class="g2">
+        <select onchange="ug(${i},'oi',+this.value)">
+          ${OPTS.map((o,oi) => `<option value="${oi}"${g.oi===oi?' selected':''}>${o.name}</option>`).join('')}
+        </select>
+        <select onchange="ug(${i},'mr',+this.value)" id="gr${i}">
+          ${OPTS[g.oi].v.map((v,ri) => `<option value="${ri}"${g.mr===ri?' selected':''}>${v}%以上（ランク${ri+1}）</option>`).join('')}
+        </select>
+      </div>`;
+    c.appendChild(d);
+  }
+}
+
+function buildState() {
+  const c = document.getElementById('state-ui');
+  c.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const s = cs[i];
+    const d = document.createElement('div');
+    d.className = 'row-item';
+    const ti = s.e ? 0 : s.ti;
+    d.innerHTML = `
+      <div class="row-lbl">スロット${i+1} <span class="hint">（付与確率 ${['100','50','30'][i]}%）</span></div>
+      <div class="g2">
+        <select onchange="us(${i},this.value)">
+          <option value="e"${s.e?' selected':''}>─ 空 ─</option>
+          ${OPTS.map((o,oi) => `<option value="${oi}"${!s.e&&s.ti===oi?' selected':''}>${o.name}</option>`).join('')}
+        </select>
+        <select id="sr${i}" onchange="usr(${i},+this.value)"${s.e?' disabled':''}>
+          ${s.e ? '<option>─</option>' : OPTS[ti].v.map((v,ri) => `<option value="${ri}"${s.r===ri?' selected':''}>${v}%（ランク${ri+1}）</option>`).join('')}
+        </select>
+      </div>`;
+    c.appendChild(d);
+  }
+}
+
+/* ---- event handlers ---- */
+
+function ug(i, k, v) {
+  goals[i] = {...goals[i], [k]: v};
+  if (k === 'oi') {
+    goals[i].mr = 0;
+    document.getElementById('gr'+i).innerHTML =
+      OPTS[v].v.map((x,ri) => `<option value="${ri}">${x}%以上（ランク${ri+1}）</option>`).join('');
+  }
+  clr();
+}
+
+function us(i, v) {
+  if (v === 'e') {
+    cs[i] = {e:true, ti:0, r:0};
+    const sel = document.getElementById('sr'+i);
+    sel.disabled = true;
+    sel.innerHTML = '<option>─</option>';
+  } else {
+    const ti = parseInt(v);
+    cs[i] = {e:false, ti, r:0};
+    const sel = document.getElementById('sr'+i);
+    sel.disabled = false;
+    sel.innerHTML = OPTS[ti].v.map((x,ri) => `<option value="${ri}">${x}%（ランク${ri+1}）</option>`).join('');
+  }
+  clr();
+}
+
+function usr(i, v) { cs[i] = {...cs[i], r: v}; clr(); }
+
+/* ---- calculations ---- */
+
+function doGeneral() {
+  const e = valErr();
+  if (e) { const el = document.getElementById('err'); el.textContent = e; el.style.display = 'block'; return; }
+  setWait(true);
+  setTimeout(() => {
+    const res = [];
+    for (let i = 0; i < 30000; i++) res.push(simFull(goals));
+    res.sort((a,b) => a-b);
+    const mean = res.reduce((a,b) => a+b, 0) / res.length;
+    document.getElementById('r-mean').textContent = Math.round(mean * 10) / 10;
+    [['25',0.25],['50',0.50],['75',0.75],['90',0.90],['99',0.99]].forEach(([k,p]) => {
+      document.getElementById('rp'+k).textContent = res[Math.floor(res.length * p)];
+    });
+    document.getElementById('res-general').style.display = 'block';
+    setWait(false);
+  }, 20);
+}
+
+function doCompare() {
+  const e = valErr();
+  if (e) { const el = document.getElementById('err'); el.textContent = e; el.style.display = 'block'; return; }
+  setWait(true);
+  setTimeout(() => {
+    const slots = toSlots();
+    const body  = document.getElementById('cmp-body');
+
+    if (isDone(slots, goals)) {
+      body.innerHTML = '<p style="color:var(--text2);font-size:13px;padding:.5rem 0">現在の状態で目標が達成済みです！</p>';
+      document.getElementById('cmp-note').textContent = '';
+      document.getElementById('res-cmp').style.display = 'block';
+      setWait(false);
+      return;
+    }
+
+    const ps = getPatterns(slots);
+    const N  = 2500;
+    let gMin = Infinity;
+
+    const rows = ps.map(lks => {
+      const unlockedOcc = [0,1,2].filter(i => !lks.includes(i) && slots[i] !== null);
+      const vrNA = unlockedOcc.length === 0;
+      let ecS = 0, vrS = 0;
+      for (let i = 0; i < N; i++) {
+        ecS += simFrom(slots, goals, lks, 'ec');
+        if (!vrNA) vrS += simFrom(slots, goals, lks, 'vr');
+      }
+      const ec = Math.round(ecS / N * 10) / 10;
+      const vr = vrNA ? null : Math.round(vrS / N * 10) / 10;
+      if (ec < gMin) gMin = ec;
+      if (vr !== null && vr < gMin) gMin = vr;
+      return {lks, ec, vr, vrNA};
+    });
+
+    let html = `<table class="cmp-table"><thead><tr>
+      <th>ロックパターン</th>
+      <th class="tcen">効果変更</th>
+      <th class="tcen">数値再設定</th>
+    </tr></thead><tbody>`;
+
+    for (const row of rows) {
+      const lbl  = patLabel(row.lks, slots);
+      const cost = 1 + row.lks.length;
+      const ecC  = row.ec === gMin ? `<span class="best">★ ${row.ec}</span>` : row.ec;
+      const vrC  = row.vrNA
+        ? `<span class="na">N/A</span>`
+        : (row.vr === gMin ? `<span class="best">★ ${row.vr}</span>` : row.vr);
+      html += `<tr>
+        <td>${lbl} <span class="cost-hint">(コスト ${cost}個)</span></td>
+        <td class="tcen">${ecC}</td>
+        <td class="tcen">${vrC}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+
+    body.innerHTML = html;
+    document.getElementById('cmp-note').textContent =
+      `★ が最推奨（目標達成までの期待消費量が最小）。各組み合わせ ${N.toLocaleString()} 回シミュレーション。`;
+    document.getElementById('res-cmp').style.display = 'block';
+    setWait(false);
+  }, 20);
+}
+
+/* ---- init ---- */
+buildGoals();
+buildState();
+</script>
+</body>
+</html>
