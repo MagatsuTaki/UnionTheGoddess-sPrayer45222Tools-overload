@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NIKKE オーバーロード カスタムモジュール計算ツール</title>
 <style>
 :root {
@@ -434,12 +434,17 @@ function toSlots() {
 }
 
 function getPatterns(slots) {
+  const goalOpts = new Set(goals.map(g => g.oi));
   const occ = [0,1,2].filter(i => slots[i] !== null);
+  // スロットが目標オプションと一致するかどうか
+  const useful = occ.filter(i => goalOpts.has(slots[i].ti));
   const ps = [[]];
-  for (const i of occ) ps.push([i]);
-  for (let a = 0; a < occ.length; a++)
-    for (let b = a+1; b < occ.length; b++)
-      ps.push([occ[a], occ[b]]);
+  // 1スロットロック：目標と一致するスロットのみ表示
+  for (const i of useful) ps.push([i]);
+  // 2スロットロック：ロック対象が両方とも目標と一致する場合のみ表示
+  for (let a = 0; a < useful.length; a++)
+    for (let b = a+1; b < useful.length; b++)
+      ps.push([useful[a], useful[b]]);
   return ps;
 }
 
