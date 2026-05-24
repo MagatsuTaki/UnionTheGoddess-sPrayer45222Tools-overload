@@ -247,6 +247,41 @@ button.primary {
 }
 .cost-hint { font-size: 11px; color: var(--text3); }
 
+/* 戦略選択トグル */
+.strat-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+.strat-btn {
+  flex: 1;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text2);
+  cursor: pointer;
+  text-align: center;
+  transition: background .15s, border-color .15s, color .15s;
+  line-height: 1.4;
+  min-height: 0;
+}
+.strat-btn.active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.strat-btn:hover:not(.active) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+@media (max-width: 600px) {
+  .strat-toggle { flex-direction: column; }
+}
+
 footer {
   text-align: center;
   margin-top: 2.5rem;
@@ -315,11 +350,27 @@ footer a { color: var(--text2); }
 
 <p class="err" id="err"></p>
 
+<!-- 戦略選択 -->
+<div class="card" style="margin-bottom:1rem">
+  <div class="card-title">③ 使用する戦略を選択</div>
+  <div class="strat-toggle">
+    <div class="strat-btn active" id="strat-btn-current" onclick="selectStrategy('current')">
+      <div>シミュレーションA</div>
+      <div style="font-size:11px;font-weight:400;margin-top:3px;opacity:.8">OPの種類or種類+数値を満たしたスロットはロック、種類が全て揃ったら数値再設定に切替</div>
+    </div>
+    <div class="strat-btn" id="strat-btn-proposed" onclick="selectStrategy('proposed')">
+      <div>シミュレーションB</div>
+      <div style="font-size:11px;font-weight:400;margin-top:3px;opacity:.8">スロット1は種類+数値を満たしたらロック、2・3は種類を満たしたらロック、種類が全て揃ったら数値再設定に切替</div>
+    </div>
+  </div>
+</div>
+
 <div class="btn-row">
   <button id="btn1" onclick="doGeneral()">▶ 期待値を計算</button>
   <button id="btn2" onclick="doCompare('ec')">⇄ 効果変更で計算</button>
   <button id="btn3" onclick="doCompare('vr')">⇄ 数値再設定で計算</button>
 </div>
+<button id="btn4" onclick="doStrategyCompare()" style="width:100%;margin-bottom:1rem;font-size:14px;font-weight:500;padding:13px;cursor:pointer;border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);border:0.5px solid var(--border2);transition:background .15s,border-color .15s;min-height:52px">⚖ 現行戦略 vs 提案戦略を比較（ゼロスタート）</button>
 
 <!-- Result: General -->
 <div id="res-general" class="card" style="display:none">
@@ -341,6 +392,13 @@ footer a { color: var(--text2); }
   <div class="card-title" id="cmp-title">ロックパターン比較</div>
   <div id="cmp-body"></div>
   <p class="note" id="cmp-note"></p>
+</div>
+
+<!-- Result: Strategy comparison -->
+<div id="res-strat" class="card" style="display:none">
+  <div class="card-title">シミュレーション比較（ゼロスタート・10,000回）</div>
+  <div id="strat-body" style="overflow-x:auto"></div>
+  <p class="note" id="strat-note"></p>
 </div>
 
 <footer>
@@ -369,6 +427,11 @@ const SP = [1.0, 0.5, 0.3];
 
 let goals   = [{e:false, oi:0, mr:4}, {e:true, oi:1, mr:4}, {e:true, oi:2, mr:4}];
 let cs      = [{e:true, ti:0, r:0, lk:false}, {e:true, ti:0, r:0, lk:false}, {e:true, ti:0, r:0, lk:false}];
+let selectedStrategy = 'current'; // 'current' | 'proposed'
+
+function getDecideFn() {
+  return selectedStrategy === 'proposed' ? decideProposed : decide;
+}
 
 /* ---- core simulation ---- */
 
@@ -425,6 +488,68 @@ function decide(slots, gs) {
   return {op:'ec', lk: [...d,...t].slice(0,2).map(x => x.i)};
 }
 
+// ---- 比較用 戦略 decide 関数 ----
+
+// 戦略A: 効果変更のみ・常にロックなし
+function decideA(slots, gs) {
+  return {op:'ec', lk:[]};
+}
+
+// 戦略B: 効果変更のみ・達成済みスロットのみロック
+function decideB(slots, gs) {
+  const cl = slots.map((s,i) => ({i, c: clf(s,gs)}));
+  const d = cl.filter(x => x.c === 'd');
+  return {op:'ec', lk: d.slice(0,2).map(x => x.i)};
+}
+
+// 戦略C: 全種類が揃うまでロックなし→数値再設定（数値フェーズは現行と同じ）
+function decideC(slots, gs) {
+  const activeGs = gs.filter(g => !g.e);
+  const cl = slots.map((s,i) => ({i, c: clf(s,gs)}));
+  const d = cl.filter(x => x.c === 'd');
+  const t = cl.filter(x => x.c === 't');
+  const coveredTypes = new Set([...d, ...t].map(x => slots[x.i].ti));
+  const allTypesCovered = activeGs.every(g => coveredTypes.has(g.oi));
+  if (allTypesCovered) {
+    return {op:'vr', lk: d.slice(0,2).map(x => x.i)};
+  }
+  return {op:'ec', lk:[]};
+}
+
+// 提案戦略: S1(index 0)はdoneのみロック、S2・3(index 1,2)はtype以上でロック
+//           全種類揃ったら数値フェーズは現行と同じ
+function decideProposed(slots, gs) {
+  const activeGs = gs.filter(g => !g.e);
+  const cl = slots.map((s,i) => ({i, c: clf(s,gs)}));
+  const d = cl.filter(x => x.c === 'd');
+  const t = cl.filter(x => x.c === 't');
+  const coveredTypes = new Set([...d, ...t].map(x => slots[x.i].ti));
+  const allTypesCovered = activeGs.every(g => coveredTypes.has(g.oi));
+  if (allTypesCovered) {
+    // 数値フェーズ：現行と同じ（達成済みをロック）
+    return {op:'vr', lk: d.slice(0,2).map(x => x.i)};
+  }
+  // 種類フェーズ：doneは全スロット対象、typeはS2・S3(index 1,2)のみロック候補
+  // 優先順位: done > type(S2・S3)
+  const lockable = [
+    ...cl.filter(x => x.c === 'd'),
+    ...cl.filter(x => x.c === 't' && x.i !== 0),
+  ];
+  return {op:'ec', lk: lockable.slice(0,2).map(x => x.i)};
+}
+
+// 汎用シミュレーター（decideFn を差し替えられる）
+function simStrategy(gs, decideFn) {
+  let s = [null, null, null], c = 0;
+  for (let i = 0; i < 10000; i++) {
+    if (isDone(s, gs)) break;
+    const {op, lk} = decideFn(s, gs);
+    c += 1 + lk.length;
+    s = applyStep(s, lk, op);
+  }
+  return c;
+}
+
 function applyStep(slots, lks, op) {
   const ns = [...slots];
   const lk = new Set(lks);
@@ -448,10 +573,11 @@ function applyStep(slots, lks, op) {
 }
 
 function simFull(gs) {
+  const decideFn = getDecideFn();
   let s = [null, null, null], c = 0;
   for (let i = 0; i < 10000; i++) {
     if (isDone(s, gs)) break;
-    const {op, lk} = decide(s, gs);
+    const {op, lk} = decideFn(s, gs);
     c += 1 + lk.length;
     s = applyStep(s, lk, op);
   }
@@ -459,12 +585,13 @@ function simFull(gs) {
 }
 
 function simFrom(init, gs, flk, fop) {
+  const decideFn = getDecideFn();
   if (isDone(init, gs)) return 0;
   let s = applyStep(init, flk, fop);
   let c = 1 + flk.length;
   for (let i = 0; i < 10000; i++) {
     if (isDone(s, gs)) break;
-    const {op, lk} = decide(s, gs);
+    const {op, lk} = decideFn(s, gs);
     c += 1 + lk.length;
     s = applyStep(s, lk, op);
   }
@@ -514,16 +641,16 @@ function valErr() {
 }
 
 function setWait(b) {
-  document.getElementById('btn1').disabled = b;
-  document.getElementById('btn2').disabled = b;
+  ['btn1','btn2','btn3','btn4'].forEach(id => document.getElementById(id).disabled = b);
   document.getElementById('btn1').textContent = b ? '計算中…' : '▶ 期待値を計算';
   document.getElementById('btn2').textContent = b ? '計算中…' : '⇄ 効果変更で計算';
   document.getElementById('btn3').textContent = b ? '計算中…' : '⇄ 数値再設定で計算';
+  document.getElementById('btn4').textContent = b ? '計算中…（しばらくかかります）' : '⚖ シミュレーション比較（ゼロスタート）';
   if (!b) updateVrBtn();
 }
 
 function clr() {
-  ['res-general','res-cmp'].forEach(id => document.getElementById(id).style.display = 'none');
+  ['res-general','res-cmp','res-strat'].forEach(id => document.getElementById(id).style.display = 'none');
   document.getElementById('err').style.display = 'none';
 }
 
@@ -675,7 +802,7 @@ function doCompare(op) {
       }
     }
 
-    const N = 10000;
+    const N = 2500;
     const res = [];
     for (let i = 0; i < N; i++) res.push(simFrom(slots, goals, lks, op));
     res.sort((a, b) => a - b);
@@ -712,7 +839,79 @@ function doCompare(op) {
   }, 20);
 }
 
-/* ---- init ---- */
+function selectStrategy(s) {
+  selectedStrategy = s;
+  document.getElementById('strat-btn-current').classList.toggle('active', s === 'current');
+  document.getElementById('strat-btn-proposed').classList.toggle('active', s === 'proposed');
+  clr();
+}
+
+function doStrategyCompare() {
+  const e = valErr();
+  if (e) { const el = document.getElementById('err'); el.textContent = e; el.style.display = 'block'; return; }
+  setWait(true);
+  setTimeout(() => {
+    const N = 15000;
+    const strategies = [
+      {
+        name: '現行戦略',
+        desc: '全種類が揃ったら数値再設定。done・typeをロック優先。',
+        fn: decide
+      },
+      {
+        name: '提案戦略',
+        desc: 'S1はdoneのみロック、S2・3は種類一致でロック。全種類揃ったら数値再設定。',
+        fn: decideProposed
+      },
+    ];
+
+    const results = strategies.map(st => {
+      const res = [];
+      for (let i = 0; i < N; i++) res.push(simStrategy(goals, st.fn));
+      res.sort((a, b) => a - b);
+      const mean = Math.round(res.reduce((a, b) => a + b, 0) / N * 10) / 10;
+      const pct = p => res[Math.floor(N * p)];
+      return {name: st.name, desc: st.desc, mean, p25: pct(0.25), p50: pct(0.50), p75: pct(0.75), p90: pct(0.90), p99: pct(0.99)};
+    });
+
+    const bestMean = Math.min(...results.map(r => r.mean));
+
+    let html = `<table class="cmp-table">
+      <thead><tr>
+        <th>戦略</th>
+        <th class="tcen">期待値</th>
+        <th class="tcen">25%</th>
+        <th class="tcen">50%</th>
+        <th class="tcen">75%</th>
+        <th class="tcen">90%</th>
+        <th class="tcen">99%</th>
+      </tr></thead><tbody>`;
+
+    for (const r of results) {
+      const isBest = r.mean === bestMean;
+      const meanCell = isBest ? `<span class="best">★ ${r.mean}</span>` : r.mean;
+      html += `<tr>
+        <td>
+          <div style="font-weight:${isBest?'600':'400'};color:${isBest?'var(--best-text)':'var(--text)'}">${r.name}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.5">${r.desc}</div>
+        </td>
+        <td class="tcen">${meanCell}</td>
+        <td class="tcen">${r.p25}</td>
+        <td class="tcen">${r.p50}</td>
+        <td class="tcen">${r.p75}</td>
+        <td class="tcen">${r.p90}</td>
+        <td class="tcen">${r.p99}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+
+    document.getElementById('strat-body').innerHTML = html;
+    document.getElementById('strat-note').textContent = `各戦略 ${N.toLocaleString()} 回シミュレーション ｜ ★ が期待値最小の戦略`;
+    document.getElementById('res-strat').style.display = 'block';
+    setWait(false);
+  }, 20);
+}
+
 buildGoals();
 buildState();
 updateVrBtn();
