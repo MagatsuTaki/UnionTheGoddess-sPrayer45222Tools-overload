@@ -247,7 +247,7 @@ button.primary {
 }
 .cost-hint { font-size: 11px; color: var(--text3); }
 
-/* 戦略選択トグル */
+/* シミュレーション選択トグル */
 .strat-toggle {
   display: flex;
   gap: 8px;
@@ -352,7 +352,7 @@ footer a { color: var(--text2); }
 
 <!-- 戦略選択 -->
 <div class="card" style="margin-bottom:1rem">
-  <div class="card-title">③ 使用する戦略を選択</div>
+  <div class="card-title">③ 使用するシミュレーションを選択</div>
   <div class="strat-toggle">
     <div class="strat-btn active" id="strat-btn-current" onclick="selectStrategy('current')">
       <div>シミュレーションA</div>
@@ -370,7 +370,7 @@ footer a { color: var(--text2); }
   <button id="btn2" onclick="doCompare('ec')">⇄ 効果変更で計算</button>
   <button id="btn3" onclick="doCompare('vr')">⇄ 数値再設定で計算</button>
 </div>
-<button id="btn4" onclick="doStrategyCompare()" style="width:100%;margin-bottom:1rem;font-size:14px;font-weight:500;padding:13px;cursor:pointer;border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);border:0.5px solid var(--border2);transition:background .15s,border-color .15s;min-height:52px">⚖ 現行戦略 vs 提案戦略を比較（ゼロスタート）</button>
+<button id="btn4" onclick="doStrategyCompare()" style="width:100%;margin-bottom:1rem;font-size:14px;font-weight:500;padding:13px;cursor:pointer;border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);border:0.5px solid var(--border2);transition:background .15s,border-color .15s;min-height:52px">⚖ シミュレーションA vs シミュレーションBを比較（ゼロスタート）</button>
 
 <!-- Result: General -->
 <div id="res-general" class="card" style="display:none">
@@ -516,7 +516,7 @@ function decideC(slots, gs) {
   return {op:'ec', lk:[]};
 }
 
-// 提案戦略: S1(index 0)はdoneのみロック、S2・3(index 1,2)はtype以上でロック
+// シミュレーションB: S1(index 0)はdoneのみロック、S2・3(index 1,2)はtype以上でロック
 //           全種類揃ったら数値フェーズは現行と同じ
 function decideProposed(slots, gs) {
   const activeGs = gs.filter(g => !g.e);
@@ -854,13 +854,13 @@ function doStrategyCompare() {
     const N = 15000;
     const strategies = [
       {
-        name: '現行戦略',
-        desc: '全種類が揃ったら数値再設定。done・typeをロック優先。',
+        name: 'シミュレーションA',
+        desc: '全スロット種類or種類+数値一致でロック、全種類揃ったら数値再設定',
         fn: decide
       },
       {
-        name: '提案戦略',
-        desc: 'S1はdoneのみロック、S2・3は種類一致でロック。全種類揃ったら数値再設定。',
+        name: 'シミュレーションB',
+        desc: '1は種類+数値一致のみロック、S2・3は種類一致でロック。全種類揃ったら数値再設定。',
         fn: decideProposed
       },
     ];
@@ -878,7 +878,7 @@ function doStrategyCompare() {
 
     let html = `<table class="cmp-table">
       <thead><tr>
-        <th>戦略</th>
+        <th>シミュレーション</th>
         <th class="tcen">期待値</th>
         <th class="tcen">25%</th>
         <th class="tcen">50%</th>
@@ -906,7 +906,7 @@ function doStrategyCompare() {
     html += '</tbody></table>';
 
     document.getElementById('strat-body').innerHTML = html;
-    document.getElementById('strat-note').textContent = `各戦略 ${N.toLocaleString()} 回シミュレーション ｜ ★ が期待値最小の戦略`;
+    document.getElementById('strat-note').textContent = `各シミュレーション ${N.toLocaleString()} 回シミュレーション ｜ ★ が期待値最小のシミュレーション`;
     document.getElementById('res-strat').style.display = 'block';
     setWait(false);
   }, 20);
